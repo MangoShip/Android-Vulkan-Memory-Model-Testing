@@ -205,6 +205,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container,
                         new Write22()).commit();
                 break;
+            case R.id.nav_corrPixel:
+                getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container,
+                        new CoRRPixel()).commit();
+                break;
             case R.id.nav_corr:
                 getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container,
                         new CoRR()).commit();
@@ -974,6 +978,56 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         });
     }
 
+    public void startCoRRTest(String testName, TestViewObject testViewObject) {
+        currTestViewObject = testViewObject;
+        currTestType = "CoRR";
+
+        currTestCase = findTestCase(testName);
+        shaderType = currTestCase.shaderNames[0];
+
+        Log.i("TUNING TEST", testName + " STARTING");
+
+        int tuningConfigNum = 10;
+        currTuningResults = new ArrayList<TuningResultCase>();
+        tuningRandomSeed = "vulkan";
+        tuningTestWorkgroups = 16;
+        tuningMaxWorkgroups = 32;
+        tuningMinWorkgroupSize = 16;
+        tuningMaxWorkgroupSize = 32;
+
+        //tuningDialog.dismiss();
+        currTestIterations = Integer.toString(100);
+
+        // Disable buttons and change its color
+        testViewObject.tuningButton.setEnabled(false);
+        testViewObject.tuningButton.setBackgroundColor(getResources().getColor(R.color.cyan));
+        testViewObject.tuningResultButton.button.setEnabled(false);
+        testViewObject.tuningResultButton.button.setBackgroundColor(getResources().getColor(R.color.lightgray));
+
+        // Make progress layout visible
+        testViewObject.tuningProgressLayout.setVisibility(View.VISIBLE);
+
+        tuningTestArgument[0] = "litmustest_" + testName; // Test Name
+
+        // Shader Name
+        tuningTestArgument[1] = shaderType; // Current selected shader
+        tuningTestArgument[2] = currTestCase.resultNames[0]; // Result Shader
+        tuningTestArgument[3] = currTestCase.testParamName; // Txt file that stores parameter
+
+        tuningCurrConfig = 0;
+        tuningEndConfig = tuningConfigNum;
+
+        if(tuningRandomSeed.length() == 0) {
+            tuningRandom = new Random();
+        }
+        else {
+            tuningRandom = new Random(tuningRandomSeed.hashCode());
+        }
+
+        tuningTestLoop();
+
+    }
+
     public void tuningTestLoop() {
 
         currTestViewObject.tuningCurrentConfigNumber.setText(tuningCurrConfig+1 + "/" + tuningEndConfig);
@@ -1196,7 +1250,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 if(currTestType.equals("Explorer")) {
                     currTestViewObject.explorerCurrentIterationNumber.setText(iterationNum + "/" + currTestIterations);
                 }
-                else if (currTestType.equals("Tuning")) {
+                else if (currTestType.equals("Tuning") || currTestType.equals("CoRR")) {
                     currTestViewObject.tuningCurrentIterationNumber.setText(iterationNum + "/" + currTestIterations);
                 }
                 else if (currTestType.equals("MultiExplorer")) {
@@ -1408,7 +1462,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
                     Toast.makeText(MainActivity.this, "Test " + currTestViewObject.testName + " finished!", Toast.LENGTH_LONG).show();
                 }
-                else if (currTestType.equals("Tuning")) {
+                else if (currTestType.equals("Tuning") || currTestType.equals("CoRR")) {
                     // Save param value
                     String currParamValue = convertFileToString(currTestCase.testParamName + ".txt");
 
@@ -1440,7 +1494,16 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                         tuningResultCases.put(currTestViewObject.testName, currTuningResults);
 
                         // Enable buttons and change their color
-                        handleButtons(false, currTestViewObject.buttons, currTestViewObject.resultButtons);
+                        if (currTestType.equals("Tuning")){
+                            handleButtons(false, currTestViewObject.buttons, currTestViewObject.resultButtons);
+                        }
+                        else {
+                            currTestViewObject.tuningButton.setEnabled(true);
+                            currTestViewObject.tuningButton.setBackgroundColor(getResources().getColor(R.color.lightblue));
+                            currTestViewObject.tuningResultButton.button.setEnabled(true);
+                            currTestViewObject.tuningResultButton.button.setBackgroundColor(getResources().getColor(R.color.red));
+                        }
+
 
                         currTestViewObject.tuningProgressLayout.setVisibility(View.GONE);
 

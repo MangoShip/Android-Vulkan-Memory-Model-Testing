@@ -38,6 +38,9 @@
             <menu>
                 <group android:checkableBehavior="single">
                     <item
+                        android:id="@+id/nav_corrPixel"
+                        android:title="CoRR (Pixel)" />
+                    <item
                         android:id="@+id/nav_corr"
                         android:title="CoRR" />
                     <item
