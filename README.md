@@ -5,7 +5,7 @@ This app is focused on using litmus tests to showcase the allowed behaviors on V
 This app is required to be run on devices with 8.0+ and GPU that supports Vulkan 1.1.
 
 ## Download
-Visit this [link](https://drive.google.com/drive/folders/1B1Kn9Dmfet_Q7UW7Az6kt66jw9kdjAEL?usp=sharing) to download the APK file for Pixel CoRR Testing version of this app.
+Visit this [link](https://drive.google.com/drive/folders/1B1Kn9Dmfet_Q7UW7Az6kt66jw9kdjAEL?usp=sharing) to download the APK file for Pixel Testing version of this app.
 
 ## Result Gallery
 Visit this [link](https://mangoship.github.io/Android-Vulkan-Result-Gallery/) to see a table of collected data using this app on various Android devices' GPU.
