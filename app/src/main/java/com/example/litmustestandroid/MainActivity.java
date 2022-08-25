@@ -99,9 +99,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private Random tuningRandom;
     private String tuningRandomSeed;
     private String[] tuningTestArgument = new String[4];
+    private Map<String, String> tuningParameter;
     private int tuningCurrConfig, tuningEndConfig, tuningTestWorkgroups, tuningMaxWorkgroups, tuningMinWorkgroupSize, tuningMaxWorkgroupSize;
     private ArrayList<TuningResultCase> currTuningResults = new ArrayList<TuningResultCase>();
     private HashMap<String, ArrayList<TuningResultCase>> tuningResultCases = new HashMap<>();
+    public HashMap<String, ArrayList<ConformanceResultCase>> conformanceTuningResultCases = new HashMap<>();
 
     private ArrayList<TestCase> multiSelectedTestCases = new ArrayList<TestCase>();
     private int multiCurrIteration;
@@ -111,10 +113,15 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     private EditText[] conformanceParameters = new EditText[18];
     private ArrayList<String> conformanceSelectedShaders = new ArrayList<String>();
+    private ArrayList<TestCase> conformanceSelectedTestCases = new ArrayList<TestCase>();
+    private int conformanceCurrIteration;
     private int conformanceCurrConfig;
     private int conformanceEndConfig;
     private RecyclerView conformanceTestRV;
     private ArrayList<ConformanceResultCase> conformanceTestResults = new ArrayList<ConformanceResultCase>();
+
+    private FileOutputStream conformanceTuningFOS;
+    private JsonWriter conformanceTuningResultWriter;
 
     private static final String TAG = "MainActivity";
 
@@ -511,142 +518,154 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
     }
 
-    public void writeTuningParameters(ArrayList<TestCase> testCases, double generator) {
-        boolean smoothedParameters = true;
-        int workgroupLimiter = tuningMaxWorkgroups;
+    public void writeTuningParameters(TestCase testCase, boolean reset) {
+        if (reset) {
+            boolean smoothedParameters = true;
+            int workgroupLimiter = tuningMaxWorkgroups;
 
-        int testingWorkgroups = randomGenerator(tuningTestWorkgroups, workgroupLimiter);
-        int stressLineSize = (int) Math.pow(2, randomGenerator(2, 10));
-        int stressTargetLines = randomGenerator(1, 16);
-        int memStride = randomGenerator(1, 7);
-        Map<String, String> parameterFormat = new TreeMap<String, String>();
+            int testingWorkgroups = randomGenerator(tuningTestWorkgroups, workgroupLimiter);
+            int stressLineSize = (int) Math.pow(2, randomGenerator(2, 10));
+            int stressTargetLines = randomGenerator(1, 16);
+            int memStride = randomGenerator(1, 7);
+            tuningParameter = new TreeMap<String, String>();
 
-        int paramPresetValue = this.getResources().getIdentifier(testCases.get(0).paramPresetNames[0], "raw", this.getPackageName());
-        InputStream inputStream = getResources().openRawResource(paramPresetValue);
-        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+            int paramPresetValue = this.getResources().getIdentifier(testCase.paramPresetNames[0], "raw", this.getPackageName());
+            InputStream inputStream = getResources().openRawResource(paramPresetValue);
+            BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
 
-        // Get parameter format by reading preset file
-        try {
-            String line = bufferedReader.readLine();
-            while (line != null) {
-                String[] words = line.split("=");
-                parameterFormat.put(words[0], words[1]);
-                line = bufferedReader.readLine();
+            // Get parameter format by reading preset file
+            try {
+                String line = bufferedReader.readLine();
+                while (line != null) {
+                    String[] words = line.split("=");
+                    tuningParameter.put(words[0], words[1]);
+                    line = bufferedReader.readLine();
+                }
+                inputStream.close();
+                bufferedReader.close();
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-            inputStream.close();
-            bufferedReader.close();
+
+            // Now randomize certain parmeter values
+            tuningParameter.put("testIterations", currTestIterations);
+
+            tuningParameter.put("testingWorkgroups", Integer.toString(testingWorkgroups));
+            tuningParameter.put("maxWorkgroups", Integer.toString(tuningMaxWorkgroups));
+            tuningParameter.put("minWorkgroupSize", Integer.toString(tuningMinWorkgroupSize));
+            tuningParameter.put("maxWorkgroupSize", Integer.toString(tuningMaxWorkgroupSize));
+            tuningParameter.put("shufflePct", Integer.toString(getPercentage(smoothedParameters)));
+            tuningParameter.put("barrierPct", Integer.toString(getPercentage(smoothedParameters)));
+            tuningParameter.put("scratchMemorySize", Integer.toString(32 * stressLineSize * stressTargetLines));
+            tuningParameter.put("memStride", Integer.toString(memStride));
+            tuningParameter.put("memStressPct", Integer.toString(getPercentage(smoothedParameters)));
+            tuningParameter.put("memStressIterations", Integer.toString(randomGenerator(0, 1024)));
+            tuningParameter.put("preStressPct", Integer.toString(getPercentage(smoothedParameters)));
+            tuningParameter.put("preStressIterations", Integer.toString(randomGenerator(0, 128)));
+            tuningParameter.put("stressLineSize", Integer.toString(stressLineSize));
+            tuningParameter.put("stressTargetLines", Integer.toString(stressTargetLines));
+
+            boolean stressStrategyBalance = Math.floor(Math.random() * 100) < getPercentage(smoothedParameters);
+            int stressAssignmentStrategy;
+            if (stressStrategyBalance) {
+                stressAssignmentStrategy = 1;
+            } else {
+                stressAssignmentStrategy = 0;
+            }
+            tuningParameter.put("stressAssignmentStrategy", Integer.toString(stressAssignmentStrategy));
+
+            boolean memStressStoreFirst = Math.floor(Math.random() * 100) < getPercentage(smoothedParameters);
+            boolean memStressStoreSecond = Math.floor(Math.random() * 100) < getPercentage(smoothedParameters);
+            int memStressPattern;
+            if (memStressStoreFirst) {
+                if (memStressStoreSecond) {
+                    memStressPattern = 0;
+                } else {
+                    memStressPattern = 1;
+                }
+            } else {
+                if (memStressStoreSecond) {
+                    memStressPattern = 2;
+                } else {
+                    memStressPattern = 3;
+                }
+            }
+            tuningParameter.put("memStressPattern", Integer.toString(memStressPattern));
+
+            boolean preStressStoreFirst = Math.floor(Math.random() * 100) < getPercentage(smoothedParameters);
+            boolean preStressStoreSecond = Math.floor(Math.random() * 100) < getPercentage(smoothedParameters);
+            int preStressPattern;
+            if (preStressStoreFirst) {
+                if (preStressStoreSecond) {
+                    preStressPattern = 0;
+                } else {
+                    preStressPattern = 1;
+                }
+            } else {
+                if (preStressStoreSecond) {
+                    preStressPattern = 2;
+                } else {
+                    preStressPattern = 3;
+                }
+            }
+            tuningParameter.put("preStressPattern", Integer.toString(preStressPattern));
+        }
+        // Now insert the parameter values to text file that will be used during test
+        try {
+            String fileName = "litmustest_" + testCase.testName + "_parameters.txt";
+            FileOutputStream fos = openFileOutput(fileName, Context.MODE_PRIVATE);
+
+            for (String key : tuningParameter.keySet()) {
+                if (key.equals("permuteSecond") || key.equals("aliasedMemory")) {
+                    if (testCase.testType.equals("coherence") || testCase.testType.equals("weakMemory_coherence")) {
+                        fos.write((key + "=1\n").getBytes());
+                    } else {
+                        if (key.equals("permuteSecond")) {
+                            fos.write((key + "=419\n").getBytes());
+                        } else {
+                            fos.write((key + "=0\n").getBytes());
+                        }
+                    }
+                } else {
+                    fos.write((key + "=" + tuningParameter.get(key) + "\n").getBytes());
+                }
+            }
+        }
+        catch (FileNotFoundException e)
+        {
+            e.printStackTrace();
         }
         catch (IOException e)
         {
             e.printStackTrace();
         }
+        try {
+            String fileName = "litmustest_" + testCase.testName + "_parameters.txt";
+            FileInputStream fis = openFileInput(fileName);
+            InputStreamReader isr = new InputStreamReader(fis);
+            BufferedReader br = new BufferedReader(isr);
+            StringBuilder sb = new StringBuilder();
 
-        // Now randomize certain parmeter values
-        parameterFormat.put("testIterations", currTestIterations);
+            String text;
+            while ((text = br.readLine()) != null) {
+                Log.i(TAG, text);
+            }
 
-        parameterFormat.put("testingWorkgroups", Integer.toString(testingWorkgroups));
-        parameterFormat.put("maxWorkgroups", Integer.toString(tuningMaxWorkgroups));
-        parameterFormat.put("minWorkgroupSize", Integer.toString(tuningMinWorkgroupSize));
-        parameterFormat.put("maxWorkgroupSize", Integer.toString(tuningMaxWorkgroupSize));
-        parameterFormat.put("shufflePct", Integer.toString(getPercentage(smoothedParameters)));
-        parameterFormat.put("barrierPct", Integer.toString(getPercentage(smoothedParameters)));
-        parameterFormat.put("scratchMemorySize", Integer.toString(32 * stressLineSize * stressTargetLines));
-        parameterFormat.put("memStride", Integer.toString(memStride));
-        parameterFormat.put("memStressPct", Integer.toString(getPercentage(smoothedParameters)));
-        parameterFormat.put("memStressIterations", Integer.toString(randomGenerator(0, 1024)));
-        parameterFormat.put("preStressPct", Integer.toString(getPercentage(smoothedParameters)));
-        parameterFormat.put("preStressIterations", Integer.toString(randomGenerator(0, 128)));
-        parameterFormat.put("stressLineSize", Integer.toString(stressLineSize));
-        parameterFormat.put("stressTargetLines", Integer.toString(stressTargetLines));
-
-        boolean stressStrategyBalance = Math.floor(Math.random() * 100) < getPercentage(smoothedParameters);
-        int stressAssignmentStrategy;
-        if(stressStrategyBalance) {
-            stressAssignmentStrategy = 1;
+            fis.close();
+            isr.close();
+            br.close();
         }
-        else {
-            stressAssignmentStrategy = 0;
+        catch (FileNotFoundException e)
+        {
+            e.printStackTrace();
         }
-        parameterFormat.put("stressAssignmentStrategy", Integer.toString(stressAssignmentStrategy));
-
-        boolean memStressStoreFirst = Math.floor(Math.random() * 100) < getPercentage(smoothedParameters);
-        boolean memStressStoreSecond = Math.floor(Math.random() * 100) < getPercentage(smoothedParameters);
-        int memStressPattern;
-        if (memStressStoreFirst) {
-            if (memStressStoreSecond) {
-                memStressPattern = 0;
-            }
-            else {
-                memStressPattern = 1;
-            }
+        catch (IOException e)
+        {
+            e.printStackTrace();
         }
-        else {
-            if (memStressStoreSecond) {
-                memStressPattern = 2;
-            }
-            else {
-                memStressPattern = 3;
-            }
-        }
-        parameterFormat.put("memStressPattern", Integer.toString(memStressPattern));
-
-        boolean preStressStoreFirst = Math.floor(Math.random() * 100) < getPercentage(smoothedParameters);
-        boolean preStressStoreSecond = Math.floor(Math.random() * 100) < getPercentage(smoothedParameters);
-        int preStressPattern;
-        if (preStressStoreFirst) {
-            if (preStressStoreSecond) {
-                preStressPattern = 0;
-            }
-            else {
-                preStressPattern = 1;
-            }
-        }
-        else {
-            if (preStressStoreSecond) {
-                preStressPattern = 2;
-            }
-            else {
-                preStressPattern = 3;
-            }
-        }
-        parameterFormat.put("preStressPattern", Integer.toString(preStressPattern));
-
-        for(int i = 0; i < testCases.size(); i++) {
-            // Now insert the parameter values to text file that will be used during test
-            try {
-                String fileName = "litmustest_" + testCases.get(i).testName + "_parameters.txt";
-                FileOutputStream fos = openFileOutput(fileName, Context.MODE_PRIVATE);
-
-                for (String key: parameterFormat.keySet()) {
-                    if(key.equals("permuteSecond") || key.equals("aliasedMemory")) {
-                        if(testCases.get(i).testType.equals("coherence")) {
-                            fos.write((key + "=1\n").getBytes());
-                        }
-                        else {
-                            if(key.equals("permuteSecond")) {
-                                fos.write((key + "=419\n").getBytes());
-                            }
-                            else {
-                                fos.write((key + "=0\n").getBytes());
-                            }
-                        }
-                    }
-                    else {
-                        fos.write((key + "=" + parameterFormat.get(key) + "\n").getBytes());
-                    }
-                }
-            }
-            catch (FileNotFoundException e)
-            {
-                e.printStackTrace();
-            }
-            catch (IOException e)
-            {
-                e.printStackTrace();
-            }
-        }
-
     }
+
+
 
     public void handleButtons(boolean testBegin, Button[] buttons, ResultButton[] resultButtons) {
         // button[0] = currently running test's button
@@ -1034,9 +1053,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
         double generator = tuningRandom.nextDouble();
 
-        ArrayList<TestCase> testCase = new ArrayList<TestCase>();
-        testCase.add(currTestCase);
-        writeTuningParameters(testCase, generator);
+        writeTuningParameters(currTestCase, true);
 
         // Run test in different thread
         testThread = new TestThread(MainActivity.this, tuningTestArgument, true, false);
@@ -1122,7 +1139,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     }
 
     public void multiExplorerTestLoop() {
-
         currTestCase = multiSelectedTestCases.get(multiCurrIteration);
         String[] testArgument = new String[4];
 
@@ -1229,8 +1245,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             // Get generator
             double generator = tuningRandom.nextDouble();
 
-            // Write tuning parameter to all selected test cases
-            writeTuningParameters(multiSelectedTestCases, generator);
+            // Write tuning parameter to current test case
+            writeTuningParameters(currTestCase, true);
+        }
+        else {
+            writeTuningParameters(currTestCase, false);
         }
 
         // Run test in different thread
@@ -1259,7 +1278,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 else if (currTestType.equals("MultiTuning")){ // Multi Tuning test
                     currMultiTestViewObject.currentIterationNumber.setText(iterationNum + "/" + currTestIterations);
                 }
-                else { // Conformance
+                else if (currTestType.equals("ConformanceExplorer")){ // Conformance Explorer
+                    conformanceTestViewObject.currentIterationNumber.setText(iterationNum + "/" + currTestIterations);
+                }
+                else { // Conformance Tuning
                     conformanceTestViewObject.currentIterationNumber.setText(iterationNum + "/" + currTestIterations);
                 }
             }
@@ -1287,9 +1309,13 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             subject += " MultiTest Tuning Result";
             fileName = "litmustest_multitest_tuning_result.json";
         }
-        else if (testMode.equals("Conformance")) {
-            subject += " Conformance Test Result";
-            fileName = "litmustest_conformance_result.json";
+        else if (testMode.equals("ConformanceExplorer")) {
+            subject += " Conformance Test Explorer Result";
+            fileName = "litmustest_conformance_explorer_result.json";
+        }
+        else if (testMode.equals("ConformanceTuning")) {
+            subject += " Conformance Test Tuning Result";
+            fileName = "litmustest_conformance_tuning_result.json";
         }
         else { // Shouldn't be here
             Log.e(TAG, "multiTestSendResult invalid currTestType!: " + currTestType);
@@ -1336,11 +1362,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         //Log.i(TAG, "conformance: " + shaderName + " " + currCheckBox.isChecked());
     }
 
-    public void conformanceTestBegin(EditText[] parameters, ConformanceTestViewObject multiTestViewObject, RecyclerView multiTestRV) {
-        currTestType = "Conformance";
+    public void conformanceExplorerTestBegin(EditText[] parameters, ConformanceTestViewObject viewObject, RecyclerView resultRV) {
+        currTestType = "ConformanceExplorer";
         conformanceParameters = parameters;
-        conformanceTestViewObject = multiTestViewObject;
-        conformanceTestRV = multiTestRV;
+        conformanceTestViewObject = viewObject;
+        conformanceTestRV = resultRV;
         conformanceSelectedShaders = new ArrayList<String>();
 
         // Check if at least one test selected
@@ -1361,18 +1387,21 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         // Set progress layout visible
         conformanceTestViewObject.progressLayout.setVisibility(View.VISIBLE);
 
+        // Set config layout remain invisible
+        conformanceTestViewObject.configLayout.setVisibility(View.GONE);
+
         // Set result layout invisible
-        conformanceTestViewObject.resultLayout.setVisibility(View.GONE);
+        conformanceTestViewObject.explorerResultLayout.setVisibility(View.GONE);
 
         conformanceTestResults = new ArrayList<ConformanceResultCase>();
         conformanceCurrConfig = 0;
         conformanceEndConfig = conformanceSelectedShaders.size();
 
         // Start multi tuning test loop
-        conformanceTestLoop();
+        conformanceExplorerTestLoop();
     }
 
-    public void conformanceTestLoop()  {
+    public void conformanceExplorerTestLoop()  {
         String shaderName = conformanceSelectedShaders.get(conformanceCurrConfig);
         currTestCase = findTestCaseWithConformanceShader(shaderName);
         String[] testArgument = new String[4];
@@ -1417,6 +1446,143 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             paramPresetValue = this.getResources().getIdentifier(currTestCase.paramPresetNames[0], "raw", this.getPackageName());
         }
         writeParameters(currTestCase.testName, conformanceParameters, paramPresetValue);
+
+        // Run test in different thread
+        testThread = new TestThread(MainActivity.this, testArgument, false, true);
+        testThread.start();
+    }
+
+    public void conformanceTuningTestBegin(EditText[] parameters, ConformanceTestViewObject viewObject, RecyclerView resultRV) {
+        currTestType = "ConformanceTuning";
+        conformanceTestViewObject = viewObject;
+        conformanceTestRV = resultRV;
+        conformanceSelectedShaders = new ArrayList<String>();
+        conformanceSelectedTestCases = new ArrayList<TestCase>();
+
+        // Check if at least one test selected
+        for (LinkedHashMap.Entry<String, Boolean> entry :  conformanceShaders.entrySet()) {
+            if(entry.getValue() == true) {
+                conformanceSelectedShaders.add(entry.getKey());
+                conformanceSelectedTestCases.add(findTestCaseWithConformanceShader(entry.getKey()));
+            }
+        }
+        if(conformanceSelectedTestCases.size() == 0) { // No test selected
+            Toast.makeText(MainActivity.this, "No test selected!", Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        // Go through selected test case and change test type
+        for(int i = 0; i < conformanceSelectedTestCases.size(); i++) {
+            if (conformanceSelectedShaders.get(i).contains("coherency")) {
+                conformanceSelectedTestCases.get(i).testType = "coherency";
+            }
+        }
+
+        // Disable start button
+        conformanceTestViewObject.startButton.setEnabled(false);
+        conformanceTestViewObject.startButton.setBackgroundColor(getResources().getColor(R.color.cyan));
+
+        // Set progress layout visible
+        conformanceTestViewObject.progressLayout.setVisibility(View.VISIBLE);
+
+        // Set config layout visible
+        conformanceTestViewObject.configLayout.setVisibility(View.VISIBLE);
+
+        // Set result layout invisible
+        conformanceTestViewObject.tuningResultLayout.setVisibility(View.GONE);
+
+        int tuningConfigNum = Integer.parseInt(parameters[0].getText().toString());
+        conformanceTestResults = new ArrayList<ConformanceResultCase>();
+        currTestIterations = parameters[1].getText().toString();
+        tuningRandomSeed = parameters[2].getText().toString();
+        tuningTestWorkgroups = Integer.parseInt(parameters[3].getText().toString());
+        tuningMaxWorkgroups = Integer.parseInt(parameters[4].getText().toString());
+        tuningMinWorkgroupSize = Integer.parseInt(parameters[5].getText().toString());
+        tuningMaxWorkgroupSize = Integer.parseInt(parameters[6].getText().toString());
+
+        tuningCurrConfig = 0;
+        tuningEndConfig = tuningConfigNum;
+
+        conformanceCurrIteration = 0;
+
+        if(tuningRandomSeed.length() == 0) {
+            tuningRandom = new Random();
+        }
+        else {
+            tuningRandom = new Random(tuningRandomSeed.hashCode());
+        }
+
+        // Initialize result writer
+        String outputFileName = "litmustest_conformance_tuning_result.json";
+        try {
+            conformanceTuningFOS = openFileOutput(outputFileName, Context.MODE_PRIVATE);
+            conformanceTuningResultWriter = new JsonWriter(new OutputStreamWriter(conformanceTuningFOS, "UTF-8"));
+            conformanceTuningResultWriter.setIndent("  ");
+            conformanceTuningResultWriter.beginArray();
+            conformanceTuningResultWriter.beginObject();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+        // Start multi tuning test loop
+        conformanceTuningTestLoop();
+    }
+
+    public void conformanceTuningTestLoop()  {
+        currTestCase = conformanceSelectedTestCases.get(conformanceCurrIteration);
+        String currShader = conformanceSelectedShaders.get(conformanceCurrIteration);
+        String[] testArgument = new String[4];
+
+        testArgument[0] = "litmustest_" + currTestCase.testName; // Test Name
+
+        // Shader Name
+        testArgument[1] = currShader; // Current selected shader
+
+        // Choosing result shader
+        String coherencyCheck = "coherency";
+        String barrierCheck = "barrier";
+        String rmwCheck = "rmw";
+        if(currShader.contains(coherencyCheck)) {
+            currTestCase.testType = "weakMemory_coherence";
+            testArgument[2] = currTestCase.resultNames[1]; // Coherency result shader
+        }
+        else {
+            if(currTestCase.testType.equals("weakMemory_coherence")) {
+                currTestCase.testType = "weakMemory";
+            }
+            testArgument[2] = currTestCase.resultNames[0]; // Default result Shader
+        }
+        testArgument[3] = currTestCase.testParamName; // Txt file that stores parameter
+
+        // Update test name
+        if(currShader.contains(coherencyCheck)) { // Weak memory Tests (single memory)
+            conformanceTestViewObject.currentTestName.setText(currTestCase.testName + " (single)");
+        }
+        else if(currShader.contains(barrierCheck)) { // Weak memory Tests (barrier)
+            conformanceTestViewObject.currentTestName.setText(currTestCase.testName + " (barrier)");
+        }
+        else if(currShader.contains(rmwCheck)) { // Coherency Tests (RMW)
+            conformanceTestViewObject.currentTestName.setText(currTestCase.testName + " (RMW)");
+        }
+        else { // Coherency Tests (default)
+            conformanceTestViewObject.currentTestName.setText(currTestCase.testName);
+        }
+
+        // Update current config number
+        conformanceTestViewObject.currentConfigNumber.setText(tuningCurrConfig+1 + "/" + tuningEndConfig);
+
+        Log.i(TAG, "TestName: " + currTestCase.testName + " Shader: " + currShader);
+
+        if(conformanceCurrIteration == 0) {
+            // Get generator
+            double generator = tuningRandom.nextDouble();
+
+            // Write tuning parameter to current test case
+            writeTuningParameters(currTestCase, true);
+        }
+        else {
+            writeTuningParameters(currTestCase, false);
+        }
 
         // Run test in different thread
         testThread = new TestThread(MainActivity.this, testArgument, false, true);
@@ -1757,7 +1923,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                         multiTuningTestLoop();
                     }
                 }
-                else { // Conformance
+                else if (currTestType.equals("ConformanceExplorer")) { // Conformance Explorer
                     // Save param value
                     String currParamValue = convertFileToString(currTestCase.testParamName + ".txt");
 
@@ -1787,7 +1953,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
                         // Write a json file
                         try {
-                            String outputFileName = "litmustest_conformance_result.json";
+                            String outputFileName = "litmustest_conformance_explorer_result.json";
                             FileOutputStream conformanceFOS = openFileOutput(outputFileName, Context.MODE_PRIVATE);
                             JsonWriter conformanceResultWriter = new JsonWriter(new OutputStreamWriter(conformanceFOS, "UTF-8"));
                             conformanceResultWriter.setIndent("  ");
@@ -1847,7 +2013,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                         }
 
                         // Write to external storage
-                        String fileName = "litmustest_conformance_result.json";
+                        String fileName = "litmustest_conformance_explorer_result.json";
                         try {
                             FileInputStream fis = openFileInput(fileName);
                             FileChannel inChannel = fis.getChannel();
@@ -1876,7 +2042,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                         conformanceTestViewObject.progressLayout.setVisibility(View.GONE);
 
                         // Set result layout visible
-                        conformanceTestViewObject.resultLayout.setVisibility(View.VISIBLE);
+                        conformanceTestViewObject.explorerResultLayout.setVisibility(View.VISIBLE);
+
+                        // Indicate that there is result to be displayed
+                        conformanceTestViewObject.newExplorer = false;
 
                         // Update result
                         ConformanceTestResultAdapter conformanceTestResultAdapter = new ConformanceTestResultAdapter(MainActivity.this, conformanceTestResults);
@@ -1886,7 +2055,165 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     }
                     else {
                         conformanceCurrConfig++;
-                        conformanceTestLoop();
+                        conformanceExplorerTestLoop();
+                    }
+                }
+                else { // Conformance Tuning
+                    // Save param value
+                    String currParamValue = convertFileToString(currTestCase.testParamName + ".txt");
+
+                    // Save result value
+                    String currResultValue = convertFileToString(currTestCase.outputNames[0] + ".txt");
+
+                    // Go through result and get number of weak behaviors
+                    String startIndexIndicator = "Non-weak: ";
+                    String endIndexIndicator = "\nWeak:";
+                    String numNonWeakBehaviors = currResultValue.substring(currResultValue.indexOf(startIndexIndicator) + startIndexIndicator.length(), currResultValue.indexOf(endIndexIndicator));
+
+
+                    // Go through result and get number of weak behaviors
+                    startIndexIndicator = "Weak: ";
+                    endIndexIndicator = "\nTotal elapsed time";
+                    String numWeakBehaviors = currResultValue.substring(currResultValue.indexOf(startIndexIndicator) + startIndexIndicator.length(), currResultValue.indexOf(endIndexIndicator));
+
+                    // Transfer over the tuning result case
+                    ConformanceResultCase currConformanceResult = new ConformanceResultCase(conformanceTestViewObject.currentTestName.getText().toString(), currParamValue, currResultValue,
+                            Integer.parseInt(numNonWeakBehaviors), Integer.parseInt(numWeakBehaviors));
+
+                    conformanceTestResults.add(currConformanceResult);
+
+                    if(conformanceCurrIteration == conformanceSelectedTestCases.size() - 1) { // One tuning config test completed
+                        conformanceTuningResultCases.put(Integer.toString(tuningCurrConfig), conformanceTestResults);
+
+                        // Append to the result file
+                        try {
+                            conformanceTuningResultWriter.name(Integer.toString(tuningCurrConfig));
+                            conformanceTuningResultWriter.beginObject();
+
+                            // Result
+                            for(int i = 0; i < conformanceTestResults.size(); i++) {
+                                ConformanceResultCase resultCase = conformanceTestResults.get(i);
+
+                                String resultName = resultCase.testName;
+
+                                conformanceTuningResultWriter.name(resultName);
+                                conformanceTuningResultWriter.beginObject();
+                                conformanceTuningResultWriter.name("Non-weak").value(resultCase.numNonWeakBehaviors);
+                                conformanceTuningResultWriter.name("Weak").value(resultCase.numWeakBehaviors);
+                                conformanceTuningResultWriter.endObject();
+                            }
+
+                            // Parameter
+                            conformanceTuningResultWriter.name("Test Parameters");
+                            conformanceTuningResultWriter.beginObject();
+
+                            FileInputStream fis = openFileInput(currTestCase.testParamName + ".txt");
+                            InputStreamReader isr = new InputStreamReader(fis);
+                            BufferedReader br = new BufferedReader(isr);
+
+                            String line = br.readLine();
+                            while (line != null) {
+                                String[] words = line.split("=");
+                                if(!words[0].equals("numMemLocations") && !words[0].equals("numOutputs")
+                                        && !words[0].equals("permuteFirst") && !words[0].equals("permuteSecond")
+                                        && !words[0].equals("aliasedMemory") && !words[0].equals("gpuDeviceId")) {
+                                    conformanceTuningResultWriter.name(words[0]).value(Integer.parseInt(words[1]));
+                                }
+                                line = br.readLine();
+                            }
+                            fis.close();
+                            isr.close();
+                            br.close();
+
+                            conformanceTuningResultWriter.endObject();
+
+                            conformanceTuningResultWriter.endObject();
+
+                        }
+                        catch (IOException e) {
+                            e.printStackTrace();
+                        }
+
+                        // Reset currTuningResults for next test config
+                        conformanceTestResults = new ArrayList<ConformanceResultCase>();
+
+                        // Reset tuning config
+                        conformanceCurrIteration = 0;
+                        tuningCurrConfig++;
+
+                        if(tuningCurrConfig == tuningEndConfig) { // All tuning tests completed
+
+                            Toast.makeText(MainActivity.this, "All tests have been completed!", Toast.LENGTH_LONG).show();
+
+                            // Enable start button
+                            conformanceTestViewObject.startButton.setEnabled(true);
+                            conformanceTestViewObject.startButton.setBackgroundColor(getResources().getColor(R.color.lightblue));
+
+                            // Set progress layout invisible
+                            conformanceTestViewObject.progressLayout.setVisibility(View.GONE);
+
+                            // Set result layout visible
+                            conformanceTestViewObject.tuningResultLayout.setVisibility(View.VISIBLE);
+
+                            // Indicate that there is result to be displayed
+                            conformanceTestViewObject.newTuning = false;
+
+                            // Close result writer
+                            try {
+                                conformanceTuningResultWriter.name("gpu").value(GPUName);
+                                conformanceTuningResultWriter.name("configurations").value(tuningEndConfig);
+                                conformanceTuningResultWriter.name("randomSeed").value(tuningRandomSeed);
+
+                                conformanceTuningResultWriter.endObject();
+                                conformanceTuningResultWriter.endArray();
+                                conformanceTuningResultWriter.close();
+                                conformanceTuningFOS.close();
+                            }
+                            catch (IOException e) {
+                                e.printStackTrace();
+                            }
+
+                            // Write to external storage
+                            String fileName = "litmustest_conformance_tuning_result.json";
+                            try {
+                                FileInputStream fis = openFileInput(fileName);
+                                FileChannel inChannel = fis.getChannel();
+                                File output = new File(getExternalFilesDir(Environment.DIRECTORY_DCIM),fileName);
+                                FileChannel outChannel =  new FileOutputStream(output).getChannel();
+
+                                inChannel.transferTo(0, inChannel.size(), outChannel);
+                                fis.close();
+                                inChannel.close();
+                                outChannel.close();
+                            }
+                            catch (FileNotFoundException e)
+                            {
+                                e.printStackTrace();
+                            }
+                            catch (IOException e)
+                            {
+                                e.printStackTrace();
+                            }
+
+                            // Get string array of test names
+                            String[] testNumbers = new String[tuningEndConfig];
+                            for(int i = 0; i < tuningEndConfig; i++) {
+                                testNumbers[i] = Integer.toString(i);
+                            }
+
+                            // Update result
+                            ConformanceTestResultAdapter conformanceTestResultAdapter = new ConformanceTestResultAdapter(MainActivity.this, testNumbers);
+                            conformanceTestRV.setAdapter(conformanceTestResultAdapter);
+                            conformanceTestRV.setLayoutManager(new LinearLayoutManager(MainActivity.this));
+                            conformanceTestRV.addItemDecoration(new DividerItemDecoration(MainActivity.this, LinearLayoutManager.VERTICAL));
+                        }
+                        else {
+                            conformanceTuningTestLoop();
+                        }
+                    }
+                    else {
+                        conformanceCurrIteration++;
+                        conformanceTuningTestLoop();
                     }
                 }
             }

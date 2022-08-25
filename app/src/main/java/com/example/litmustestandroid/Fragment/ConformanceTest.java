@@ -17,7 +17,6 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.litmustestandroid.HelperClass.ConformanceTestViewObject;
-import com.example.litmustestandroid.HelperClass.MultiTestViewObject;
 import com.example.litmustestandroid.HelperClass.TestCase;
 import com.example.litmustestandroid.MainActivity;
 import com.example.litmustestandroid.R;
@@ -28,7 +27,8 @@ import java.util.ArrayList;
 
 public class ConformanceTest  extends Fragment {
 
-    private Button defaultParamButton, stressParamButton, sendResultButton;
+    private Button explorerButton, tuningButton, defaultParamButton, stressParamButton, explorerSendResultButton, tuningSendResultButton;
+    private String testMode = "ConformanceExplorer";
 
     @Nullable
     @org.jetbrains.annotations.Nullable
@@ -41,6 +41,9 @@ public class ConformanceTest  extends Fragment {
             ((MainActivity)getActivity()).conformanceShaders.replaceAll((k, v) -> v = false);
         }
 
+        TextView note = fragmentView.findViewById(R.id.conformance_test_note);
+        note.setText(getResources().getString(R.string.conformance_test_note));
+
         TextView description = fragmentView.findViewById(R.id.conformance_test_description);
         description.setText(getResources().getString(R.string.conformance_test_description));
 
@@ -50,11 +53,20 @@ public class ConformanceTest  extends Fragment {
         conformanceTestViewObject.progressLayout = fragmentView.findViewById(R.id.conformance_test_progressLayout);
         conformanceTestViewObject.progressLayout.setVisibility(View.GONE);
 
-        // Set result layout to be invisible in default
-        conformanceTestViewObject.resultLayout = fragmentView.findViewById(R.id.conformance_test_resultLayout);
-        conformanceTestViewObject.resultLayout.setVisibility(View.GONE);
+        // Set progress config layout to be invisible in default
+        conformanceTestViewObject.configLayout = fragmentView.findViewById(R.id.conformance_test_currentConfigLayout);
+        conformanceTestViewObject.configLayout.setVisibility(View.GONE);
 
-        RecyclerView resultRV = fragmentView.findViewById(R.id.conformanceTestResultRV);
+        // Set explorer result layout to be invisible in default
+        conformanceTestViewObject.explorerResultLayout = fragmentView.findViewById(R.id.conformance_test_explorerResultLayout);
+        conformanceTestViewObject.explorerResultLayout.setVisibility(View.GONE);
+
+        // Set tuning result layout to be invisible in default
+        conformanceTestViewObject.tuningResultLayout = fragmentView.findViewById(R.id.conformance_test_tuningResultLayout);
+        conformanceTestViewObject.tuningResultLayout.setVisibility(View.GONE);
+
+        RecyclerView conformanceTestExplorerResultRV = fragmentView.findViewById(R.id.conformanceTestExplorerResultRV);
+        RecyclerView conformanceTestTuningResultRV = fragmentView.findViewById(R.id.conformanceTestTuningResultRV);
 
         TextView testList = fragmentView.findViewById(R.id.conformanceTestList);
         LinearLayout testListLayout = fragmentView.findViewById(R.id.conformanceTestListLayout);
@@ -70,17 +82,72 @@ public class ConformanceTest  extends Fragment {
             }
         });
 
-        TextView parameterList = fragmentView.findViewById(R.id.conformanceTestParameter);
-        LinearLayout parameterItemLayout = fragmentView.findViewById(R.id.conformanceTestParameterItemLayout);
-        parameterList.setOnClickListener(new View.OnClickListener() {
+        TextView explorerParameterList = fragmentView.findViewById(R.id.conformanceTestExplorerParameter);
+        LinearLayout explorerParameterLayout = fragmentView.findViewById(R.id.conformanceTestExplorerParameterLayout);
+        LinearLayout explorerParameterItemLayout = fragmentView.findViewById(R.id.conformanceTestExplorerParameterItemLayout);
+        explorerParameterList.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if(parameterItemLayout.getVisibility() == View.GONE) {
-                    parameterItemLayout.setVisibility(View.VISIBLE);
+                if(explorerParameterItemLayout.getVisibility() == View.GONE) {
+                    explorerParameterItemLayout.setVisibility(View.VISIBLE);
                 }
                 else {
-                    parameterItemLayout.setVisibility(View.GONE);
+                    explorerParameterItemLayout.setVisibility(View.GONE);
                 }
+            }
+        });
+
+        TextView tuningParameterList = fragmentView.findViewById(R.id.conformanceTestTuningParameter);
+        LinearLayout tuningParameterLayout = fragmentView.findViewById(R.id.conformanceTestTuningParameterLayout);
+        LinearLayout tuningParameterItemLayout = fragmentView.findViewById(R.id.conformanceTestTuningParameterItemLayout);
+        tuningParameterList.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(tuningParameterItemLayout.getVisibility() == View.GONE) {
+                    tuningParameterItemLayout.setVisibility(View.VISIBLE);
+                }
+                else {
+                    tuningParameterItemLayout.setVisibility(View.GONE);
+                }
+            }
+        });
+
+        explorerButton = fragmentView.findViewById(R.id.conformanceTestExplorerButton);
+        tuningButton = fragmentView.findViewById(R.id.conformanceTestTuningButton);
+
+        explorerButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                explorerButton.setBackgroundColor(getResources().getColor(R.color.teal_200));
+                tuningButton.setBackgroundColor(getResources().getColor(R.color.lightgray));
+                explorerParameterLayout.setVisibility(View.VISIBLE);
+                explorerParameterItemLayout.setVisibility(View.VISIBLE);
+
+                if(!conformanceTestViewObject.newExplorer) {
+                    conformanceTestViewObject.explorerResultLayout.setVisibility(View.VISIBLE);
+                }
+
+                conformanceTestViewObject.tuningResultLayout.setVisibility(View.GONE);
+                tuningParameterLayout.setVisibility(View.GONE);
+                testMode = "ConformanceExplorer";
+            }
+        });
+
+        tuningButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                tuningButton.setBackgroundColor(getResources().getColor(R.color.teal_200));
+                explorerButton.setBackgroundColor(getResources().getColor(R.color.lightgray));
+                tuningParameterLayout.setVisibility(View.VISIBLE);
+                tuningParameterItemLayout.setVisibility(View.VISIBLE);
+
+                if(!conformanceTestViewObject.newTuning) {
+                    conformanceTestViewObject.tuningResultLayout.setVisibility(View.VISIBLE);
+                }
+
+                conformanceTestViewObject.explorerResultLayout.setVisibility(View.GONE);
+                explorerParameterLayout.setVisibility(View.GONE);
+                testMode = "ConformanceTuning";
             }
         });
 
@@ -129,34 +196,45 @@ public class ConformanceTest  extends Fragment {
         int basic_parameters = getResources().getIdentifier(currTest.paramPresetNames[0], "raw", getActivity().getPackageName());
         int stress_parameters = getResources().getIdentifier(currTest.paramPresetNames[1], "raw", getActivity().getPackageName());
 
-        EditText[] testParameters = new EditText[18];
-        testParameters[0] = (EditText) fragmentView.findViewById(R.id.conformanceTestTestIteration); // testIteration
-        testParameters[1] = (EditText) fragmentView.findViewById(R.id.conformanceTestTestingWorkgroups); // testingWorkgroups
-        testParameters[2] = (EditText) fragmentView.findViewById(R.id.conformanceTestMaxWorkgroups); // maxWorkgroups
-        testParameters[3] = (EditText) fragmentView.findViewById(R.id.conformanceTestMinWorkgroupSize); // minWorkgroupSize
-        testParameters[4] = (EditText) fragmentView.findViewById(R.id.conformanceTestMaxWorkgroupSize); // maxWorkgroupSize
-        testParameters[5] = (EditText) fragmentView.findViewById(R.id.conformanceTestShufflePct); // shufflePct
-        testParameters[6] = (EditText) fragmentView.findViewById(R.id.conformanceTestBarrierPct); // barrierPct
-        testParameters[7] = (EditText) fragmentView.findViewById(R.id.conformanceTestScratchMemorySize); // scratchMemorySize
-        testParameters[8] = (EditText) fragmentView.findViewById(R.id.conformanceTestMemoryStride); // memStride
-        testParameters[9] = (EditText) fragmentView.findViewById(R.id.conformanceTestMemoryStressPct); // memStressPct
-        testParameters[10] = (EditText) fragmentView.findViewById(R.id.conformanceTestMemoryStressIterations); // memStressIterations
-        testParameters[11] = (EditText) fragmentView.findViewById(R.id.conformanceTestMemoryStressPattern); // memStressPattern
-        testParameters[12] = (EditText) fragmentView.findViewById(R.id.conformanceTestPreStressPct); // preStressPct
-        testParameters[13] = (EditText) fragmentView.findViewById(R.id.conformanceTestPreStressIterations); // preStressIterations
-        testParameters[14] = (EditText) fragmentView.findViewById(R.id.conformanceTestPreStressPattern); // preStressPattern
-        testParameters[15] = (EditText) fragmentView.findViewById(R.id.conformanceTestStressLineSize); // stressLineSize
-        testParameters[16] = (EditText) fragmentView.findViewById(R.id.conformanceTestStressTargetLines); // stressTargetLines
-        testParameters[17] = (EditText) fragmentView.findViewById(R.id.conformanceTestStressAssignmentStrategy); // stressAssignmentStrategy
+        EditText[] conformanceTestExplorerParameters = new EditText[18];
+        conformanceTestExplorerParameters[0] = (EditText) fragmentView.findViewById(R.id.conformanceTestExplorerTestIteration); // testIteration
+        conformanceTestExplorerParameters[1] = (EditText) fragmentView.findViewById(R.id.conformanceTestExplorerTestingWorkgroups); // testingWorkgroups
+        conformanceTestExplorerParameters[2] = (EditText) fragmentView.findViewById(R.id.conformanceTestExplorerMaxWorkgroups); // maxWorkgroups
+        conformanceTestExplorerParameters[3] = (EditText) fragmentView.findViewById(R.id.conformanceTestExplorerMinWorkgroupSize); // minWorkgroupSize
+        conformanceTestExplorerParameters[4] = (EditText) fragmentView.findViewById(R.id.conformanceTestExplorerMaxWorkgroupSize); // maxWorkgroupSize
+        conformanceTestExplorerParameters[5] = (EditText) fragmentView.findViewById(R.id.conformanceTestExplorerShufflePct); // shufflePct
+        conformanceTestExplorerParameters[6] = (EditText) fragmentView.findViewById(R.id.conformanceTestExplorerBarrierPct); // barrierPct
+        conformanceTestExplorerParameters[7] = (EditText) fragmentView.findViewById(R.id.conformanceTestExplorerScratchMemorySize); // scratchMemorySize
+        conformanceTestExplorerParameters[8] = (EditText) fragmentView.findViewById(R.id.conformanceTestExplorerMemoryStride); // memStride
+        conformanceTestExplorerParameters[9] = (EditText) fragmentView.findViewById(R.id.conformanceTestExplorerMemoryStressPct); // memStressPct
+        conformanceTestExplorerParameters[10] = (EditText) fragmentView.findViewById(R.id.conformanceTestExplorerMemoryStressIterations); // memStressIterations
+        conformanceTestExplorerParameters[11] = (EditText) fragmentView.findViewById(R.id.conformanceTestExplorerMemoryStressPattern); // memStressPattern
+        conformanceTestExplorerParameters[12] = (EditText) fragmentView.findViewById(R.id.conformanceTestExplorerPreStressPct); // preStressPct
+        conformanceTestExplorerParameters[13] = (EditText) fragmentView.findViewById(R.id.conformanceTestExplorerPreStressIterations); // preStressIterations
+        conformanceTestExplorerParameters[14] = (EditText) fragmentView.findViewById(R.id.conformanceTestExplorerPreStressPattern); // preStressPattern
+        conformanceTestExplorerParameters[15] = (EditText) fragmentView.findViewById(R.id.conformanceTestExplorerStressLineSize); // stressLineSize
+        conformanceTestExplorerParameters[16] = (EditText) fragmentView.findViewById(R.id.conformanceTestExplorerStressTargetLines); // stressTargetLines
+        conformanceTestExplorerParameters[17] = (EditText) fragmentView.findViewById(R.id.conformanceTestExplorerStressAssignmentStrategy); // stressAssignmentStrategy
 
-        ((MainActivity)getActivity()).loadParameters(testParameters, basic_parameters);
+        EditText[] conformanceTestTuningParameters = new EditText[7];
+        conformanceTestTuningParameters [0] = (EditText) fragmentView.findViewById(R.id.conformanceTestTuningConfigNum); // testConfigNum
+        conformanceTestTuningParameters [1] = (EditText) fragmentView.findViewById(R.id.conformanceTestTuningTestIteration); // testIteration
+        conformanceTestTuningParameters [2] = (EditText) fragmentView.findViewById(R.id.conformanceTestTuningRandomSeed); // randomSeed
+        conformanceTestTuningParameters [3] = (EditText) fragmentView.findViewById(R.id.conformanceTestTuningTestingWorkgroups); // testingWorkgroups
+        conformanceTestTuningParameters [4] = (EditText) fragmentView.findViewById(R.id.conformanceTestTuningMaxWorkgroups); // maxWorkgroups
+        conformanceTestTuningParameters [5] = (EditText) fragmentView.findViewById(R.id.conformanceTestTuningMinWorkgroupSize); // minWorkgroupSize
+        conformanceTestTuningParameters [6] = (EditText) fragmentView.findViewById(R.id.conformanceTestTuningMaxWorkgroupSize); // maxWorkgroupSize
+
+        ((MainActivity)getActivity()).loadParameters(conformanceTestExplorerParameters, basic_parameters);
 
         defaultParamButton = fragmentView.findViewById(R.id.conformanceTestDefaultParamButton);
         stressParamButton = fragmentView.findViewById(R.id.conformanceTestStressParamButton);
-        sendResultButton = fragmentView.findViewById(R.id.conformanceTestSendResultButton);
+        explorerSendResultButton = fragmentView.findViewById(R.id.conformanceTestExplorerSendResultButton);
+        tuningSendResultButton = fragmentView.findViewById(R.id.conformanceTestTuningSendResultButton);
 
         conformanceTestViewObject.startButton = fragmentView.findViewById(R.id.conformance_test_startButton);
         conformanceTestViewObject.currentTestName = fragmentView.findViewById(R.id.conformance_test_currentTestName);
+        conformanceTestViewObject.currentConfigNumber = fragmentView.findViewById(R.id.conformance_test_currentConfigNumber);
         conformanceTestViewObject.currentIterationNumber = fragmentView.findViewById(R.id.conformance_test_currentIterationNumber);
 
         defaultParamButton.setOnClickListener(new View.OnClickListener() {
@@ -164,7 +242,7 @@ public class ConformanceTest  extends Fragment {
             public void onClick(View v) {
                 defaultParamButton.setBackgroundColor(getResources().getColor(R.color.teal_200));
                 stressParamButton.setBackgroundColor(getResources().getColor(R.color.lightgray));
-                ((MainActivity)getActivity()).loadParameters(testParameters, basic_parameters);
+                ((MainActivity)getActivity()).loadParameters(conformanceTestExplorerParameters, basic_parameters);
             }
         });
 
@@ -173,22 +251,35 @@ public class ConformanceTest  extends Fragment {
             public void onClick(View v) {
                 stressParamButton.setBackgroundColor(getResources().getColor(R.color.teal_200));
                 defaultParamButton.setBackgroundColor(getResources().getColor(R.color.lightgray));
-                ((MainActivity)getActivity()).loadParameters(testParameters, stress_parameters);
+                ((MainActivity)getActivity()).loadParameters(conformanceTestExplorerParameters, stress_parameters);
             }
         });
 
-        sendResultButton.setOnClickListener(new View.OnClickListener() {
+        explorerSendResultButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 // Open dialog for sending result
-                ((MainActivity)getActivity()).sendResultEmail("Conformance");
+                ((MainActivity)getActivity()).sendResultEmail(testMode);
+            }
+        });
+
+        tuningSendResultButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // Open dialog for sending result
+                ((MainActivity)getActivity()).sendResultEmail(testMode);
             }
         });
 
         conformanceTestViewObject.startButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                ((MainActivity)getActivity()).conformanceTestBegin(testParameters,  conformanceTestViewObject, resultRV);
+                if(testMode.equals("ConformanceExplorer")) {
+                    ((MainActivity)getActivity()).conformanceExplorerTestBegin(conformanceTestExplorerParameters,  conformanceTestViewObject, conformanceTestExplorerResultRV);
+                }
+                else { // Tuning
+                    ((MainActivity)getActivity()).conformanceTuningTestBegin(conformanceTestTuningParameters,  conformanceTestViewObject, conformanceTestTuningResultRV);
+                }
             }
         });
 

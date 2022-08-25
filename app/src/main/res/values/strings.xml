@@ -4,6 +4,8 @@
     <string name="nav_drawer_open">Open Navigation Drawer</string>
     <string name="nav_drawer_close">Close Navigation Drawer</string>
 
+    <string name="conformance_test_note">Note: Currently, the conformance testing is under construction, meaning a failed test result doesn\'t necessarily mean an implementation bug. Thank you for patience while we develop this tool.</string>
+
     <string name="litmustest_description">This app uses litmus tests to showcase the allowed behaviors of Vulkan memory model. This app is required to be run on devices with Android 8.0+, and GPU that supports Vulkan 1.1.</string>
     <string name="multi_tests_description">This page lets users to run multiple litmus tests with specific parameters at once. The test results will be displayed under the \'Start\' button once all tests have finished running.</string>
     <string name="conformance_test_description">This page is used to evaluate the performance of a set of tuned parameters on uncovering potential violations of Vulkan memory consistency model. There will be two methods of running weak memory tests: running with single memory location and running with barriers between instructions. There will also be two methods of running coherence tests: running with single memory location and running with RMW instruction. A weak behavior on any test represents a violation of Vulkan memory consistency model.</string>

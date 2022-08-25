@@ -2,6 +2,7 @@ package com.example.litmustestandroid.DialogFragments;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,10 +23,19 @@ public class ConformanceTestResultAdapter extends RecyclerView.Adapter<Conforman
 
     Context context;
     ArrayList<ConformanceResultCase> conformanceResultCases;
+    String[] testNumbers;
+    String testType;
 
     public ConformanceTestResultAdapter(Context ct, ArrayList<ConformanceResultCase> conformanceResultCases) {
         this.context = ct;
         this.conformanceResultCases = conformanceResultCases;
+        testType = "ConformanceExplorer";
+    }
+
+    public ConformanceTestResultAdapter(Context ct, String[] testNumbers) {
+        this.context = ct;
+        this.testNumbers = testNumbers;
+        testType = "ConformanceTuning";
     }
 
     @NotNull
@@ -38,34 +48,72 @@ public class ConformanceTestResultAdapter extends RecyclerView.Adapter<Conforman
 
     @Override
     public void onBindViewHolder(@NonNull @NotNull ConformanceTestResultAdapter.ConformanceTestResultViewHolder holder, int position) {
-        String currentTestName = conformanceResultCases.get(position).testName;
+        String currentTestName;
+
+        if(testType.equals("ConformanceExplorer")) {
+            currentTestName = conformanceResultCases.get(position).testName;
+        }
+        else {
+            currentTestName = testNumbers[position];
+        }
         holder.testName.setText(currentTestName);
 
         // Display test result
-        if(conformanceResultCases.get(position).violated) {
-            holder.testResult.setText("Failed");
-            holder.testResult.setTextColor(Color.RED);
+        if(testType.equals("ConformanceExplorer")) {
+            if(conformanceResultCases.get(position).violated) {
+                holder.testResult.setText("Failed");
+                holder.testResult.setTextColor(Color.RED);
+            }
+            else {
+                holder.testResult.setText("Passed");
+                holder.testResult.setTextColor(Color.GREEN);
+            }
         }
         else {
-            holder.testResult.setText("Passed");
-            holder.testResult.setTextColor(Color.GREEN);
+            ArrayList<ConformanceResultCase> resultCases = ((MainActivity)context).conformanceTuningResultCases.get(currentTestName);
+            int numTestViolated = 0;
+            for(int i = 0; i < resultCases.size(); i++) {
+                if(resultCases.get(i).violated) {
+                    numTestViolated++;
+                }
+            }
+            if(numTestViolated > 0) {
+                holder.testResult.setText("Failed");
+                holder.testResult.setTextColor(Color.RED);
+            }
+            else {
+                holder.testResult.setText("Passed");
+                holder.testResult.setTextColor(Color.GREEN);
+            }
         }
 
         holder.resultButton.setOnClickListener(new View.OnClickListener() {
             public void onClick (View v) {
-                TestResultDialogFragment outputDialog = new TestResultDialogFragment();
+                if(testType.equals("ConformanceExplorer")) {
+                    TestResultDialogFragment outputDialog = new TestResultDialogFragment();
 
-                StringBuilder sb = new StringBuilder();
-                sb.append(conformanceResultCases.get(position).results);
-                outputDialog.setText(sb);
-                outputDialog.show(((MainActivity)context).getSupportFragmentManager(), "ConformanceResultOutputDialog");
+                    StringBuilder sb = new StringBuilder();
+                    sb.append(conformanceResultCases.get(position).results);
+                    outputDialog.setText(sb);
+                    outputDialog.show(((MainActivity)context).getSupportFragmentManager(), "ConformanceResultOutputDialog");
+                }
+                else {
+                    ArrayList<ConformanceResultCase> resultCases = ((MainActivity)context).conformanceTuningResultCases.get(currentTestName);
+                    ConformanceTuningResultDialogFragment dialog = new ConformanceTuningResultDialogFragment(((MainActivity)context), currentTestName, resultCases);
+                    dialog.show(((MainActivity)context).getSupportFragmentManager(), "ConformanceTuningResultDialog");
+                }
             }
         });
     }
 
     @Override
     public int getItemCount() {
-        return conformanceResultCases.size();
+        if(testType.equals("ConformanceExplorer")) {
+            return conformanceResultCases.size();
+        }
+        else {
+            return testNumbers.length;
+        }
     }
 
     public class ConformanceTestResultViewHolder extends RecyclerView.ViewHolder {

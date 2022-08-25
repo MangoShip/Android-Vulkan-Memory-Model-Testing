@@ -9,8 +9,14 @@ public class ConformanceTestViewObject {
     public Button startButton;
 
     public LinearLayout progressLayout;
+    public LinearLayout configLayout;
     public TextView currentTestName;
+    public TextView currentConfigNumber;
     public TextView currentIterationNumber;
 
-    public LinearLayout resultLayout;
+    public LinearLayout explorerResultLayout;
+    public LinearLayout tuningResultLayout;
+
+    public boolean newExplorer = true;
+    public boolean newTuning = true;
 }

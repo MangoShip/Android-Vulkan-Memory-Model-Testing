@@ -1,5 +1,5 @@
 # Android Vulkan Memory Model Testing
-This app is focused on using litmus tests to showcase the allowed behaiovrs on Vulkan memory model on Android devices. This work is originated from [WebGPU Memory Model Testing](https://gpuharbor.ucsc.edu/webgpu-mem-testing/).
+This app is focused on using litmus tests to showcase the allowed behaviors on Vulkan memory model on Android devices. This work is originated from [WebGPU Memory Model Testing](https://gpuharbor.ucsc.edu/webgpu-mem-testing/).
 
 ## Requirement
 This app is required to be run on devices with 8.0+ and GPU that supports Vulkan 1.1.
