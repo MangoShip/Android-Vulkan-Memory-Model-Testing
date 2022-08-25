@@ -1,6 +1,4 @@
 package com.example.litmustestandroid;
-import android.app.Activity;
-import android.app.KeyguardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -21,7 +19,6 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
-import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -33,7 +30,6 @@ import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.FileProvider;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
-import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -67,8 +63,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
 
-import static android.os.Environment.getExternalStorageDirectory;
-
 public class MainActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
 
     static {
@@ -85,6 +79,8 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
     private TestViewObject currTestViewObject;
     private MultiTestViewObject currMultiTestViewObject;
     private ConformanceTestViewObject conformanceTestViewObject;
+    private PixelTestViewObject pixelTestViewObject;
+    private HashMap<String, String> pixelTestResult = new HashMap<String, String>();
 
     private AlertDialog.Builder dialogBuilder;
     private AlertDialog exploreDialog;
@@ -188,6 +184,10 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container,
                         new ConformanceTest()).commit();
                 break;
+            case R.id.nav_pixelTest:
+                getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container,
+                        new PixelTesting()).commit();
+                break;
             case R.id.nav_message_passing:
                 getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container,
                         new MessagePassing()).commit();
@@ -211,10 +211,6 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             case R.id.nav_22_write:
                 getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container,
                         new Write22()).commit();
-                break;
-            case R.id.nav_corrPixel:
-                getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container,
-                        new CoRRPixel()).commit();
                 break;
             case R.id.nav_corr:
                 getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container,
@@ -501,6 +497,32 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         }
     }
 
+    public void writeDirectParameters(String testName, int paramValue) {
+        InputStream inputStream = getResources().openRawResource(paramValue);
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(inputStream));
+
+        String fileName = "litmustest_" + testName + "_parameters.txt";
+        try{
+            FileOutputStream fos = openFileOutput(fileName, Context.MODE_PRIVATE);
+            String line = bufferedReader.readLine();
+            while (line != null) {
+                fos.write((line + "\n").getBytes());
+
+                line = bufferedReader.readLine();
+            }
+            inputStream.close();
+            fos.close();
+        }
+        catch (FileNotFoundException e)
+        {
+            e.printStackTrace();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+    }
+
     public int randomGenerator(int min, int max) {
         return (int) Math.floor(tuningRandom.nextDouble() * (max - min + 1) + min);
     }
@@ -669,9 +691,9 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
     public void handleButtons(boolean testBegin, Button[] buttons, ResultButton[] resultButtons) {
         // button[0] = currently running test's button
-        // button[1] = currently not running test's button
+        // button[1+] = currently not running test's buttons
         // resultButton[0] = currently running test's result button
-        // resultButton[1] = currently not running test's result button
+        // resultButton[1+] = currently not running test's result buttons
         if(testBegin) { // Test starting
             for(int i = 0; i < buttons.length; i++) {
                 buttons[i].setEnabled(false);
@@ -687,18 +709,20 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
             }
         }
         else { // Test ended
-            buttons[0].setEnabled(true);
-            buttons[0].setBackgroundColor(getResources().getColor(R.color.lightblue));
-            buttons[1].setEnabled(true);
-            buttons[1].setBackgroundColor(getResources().getColor(R.color.lightblue));
+            for(int i = 0; i < buttons.length; i++) {
+                buttons[i].setEnabled(true);
+                buttons[i].setBackgroundColor(getResources().getColor(R.color.lightblue));
+            }
 
             resultButtons[0].button.setEnabled(true);
             resultButtons[0].button.setBackgroundColor(getResources().getColor(R.color.red));
             resultButtons[0].isNew = false;
 
-            if(!resultButtons[1].isNew) {
-                resultButtons[1].button.setEnabled(true);
-                resultButtons[1].button.setBackgroundColor(getResources().getColor(R.color.red));
+            for(int i = 0; i < resultButtons.length; i++) {
+                if(!resultButtons[i].isNew) {
+                    resultButtons[i].button.setEnabled(true);
+                    resultButtons[i].button.setBackgroundColor(getResources().getColor(R.color.red));
+                }
             }
         }
     }
@@ -997,54 +1021,107 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
         });
     }
 
-    public void startCoRRTest(String testName, TestViewObject testViewObject) {
-        currTestViewObject = testViewObject;
-        currTestType = "CoRR";
+    public void startPixelTest(String testName, PixelTestViewObject testViewObject) {
+        pixelTestViewObject = testViewObject;
+        currTestType = "Pixel";
 
         currTestCase = findTestCase(testName);
-        shaderType = currTestCase.shaderNames[0];
-
-        Log.i("TUNING TEST", testName + " STARTING");
-
-        int tuningConfigNum = 10;
-        currTuningResults = new ArrayList<TuningResultCase>();
-        tuningRandomSeed = "vulkan";
-        tuningTestWorkgroups = 16;
-        tuningMaxWorkgroups = 32;
-        tuningMinWorkgroupSize = 16;
-        tuningMaxWorkgroupSize = 32;
-
-        //tuningDialog.dismiss();
-        currTestIterations = Integer.toString(100);
+        shaderType = currTestCase.conformanceShaderNames[0];
 
         // Disable buttons and change its color
-        testViewObject.tuningButton.setEnabled(false);
-        testViewObject.tuningButton.setBackgroundColor(getResources().getColor(R.color.cyan));
-        testViewObject.tuningResultButton.button.setEnabled(false);
-        testViewObject.tuningResultButton.button.setBackgroundColor(getResources().getColor(R.color.lightgray));
+        handleButtons(true, pixelTestViewObject.buttons, pixelTestViewObject.resultButtons);
 
         // Make progress layout visible
-        testViewObject.tuningProgressLayout.setVisibility(View.VISIBLE);
+        testViewObject.progressLayout.setVisibility(View.VISIBLE);
 
-        tuningTestArgument[0] = "litmustest_" + testName; // Test Name
-
-        // Shader Name
-        tuningTestArgument[1] = shaderType; // Current selected shader
-        tuningTestArgument[2] = currTestCase.resultNames[0]; // Result Shader
-        tuningTestArgument[3] = currTestCase.testParamName; // Txt file that stores parameter
-
-        tuningCurrConfig = 0;
-        tuningEndConfig = tuningConfigNum;
-
-        if(tuningRandomSeed.length() == 0) {
-            tuningRandom = new Random();
+        if(testViewObject.testMode.equals("Tuning")) {
+            testViewObject.tuningConfigLayout.setVisibility(View.VISIBLE);
         }
         else {
-            tuningRandom = new Random(tuningRandomSeed.hashCode());
+            testViewObject.tuningConfigLayout.setVisibility(View.GONE);
         }
 
-        tuningTestLoop();
+        currTestIterations = "100";
+        currTestCase.testType = "weakMemory";
 
+        if(testViewObject.testMode.equals("ExplorerDefault")) {
+            int basic_parameters = this.getResources().getIdentifier(currTestCase.paramPresetNames[2], "raw", this.getPackageName());
+            writeDirectParameters(testName, basic_parameters);
+            String[] testArgument = new String[4];
+            testArgument[0] = "litmustest_" + testName; // Test Name
+
+            // Shader Name
+            testArgument[1] = shaderType; // Current selected shader
+            testArgument[2] = currTestCase.resultNames[1]; // Result Shader
+            testArgument[3] = currTestCase.testParamName; // Txt file that stores parameter
+
+            testThread = new TestThread(MainActivity.this, testArgument, false, false);
+            testThread.start();
+        }
+        else if(testViewObject.testMode.equals("ExplorerStress")) {
+            int stress_parameters = this.getResources().getIdentifier(currTestCase.paramPresetNames[3], "raw", this.getPackageName());
+            writeDirectParameters(testName, stress_parameters);
+            String[] testArgument = new String[4];
+            testArgument[0] = "litmustest_" + testName; // Test Name
+
+            // Shader Name
+            testArgument[1] = shaderType; // Current selected shader
+            testArgument[2] = currTestCase.resultNames[1]; // Result Shader
+            testArgument[3] = currTestCase.testParamName; // Txt file that stores parameter
+
+            testThread = new TestThread(MainActivity.this, testArgument, false, false);
+            testThread.start();
+        }
+        else {
+            currTestCase.testType = "coherence";
+            int tuningConfigNum = 10;
+            currTuningResults = new ArrayList<TuningResultCase>();
+            tuningRandomSeed = "vulkan";
+            tuningTestWorkgroups = 16;
+            tuningMaxWorkgroups = 32;
+            tuningMinWorkgroupSize = 16;
+            tuningMaxWorkgroupSize = 32;
+
+            tuningTestArgument[0] = "litmustest_" + testName; // Test Name
+
+            // Shader Name
+            tuningTestArgument[1] = shaderType; // Current selected shader
+            tuningTestArgument[2] = currTestCase.resultNames[1]; // Result Shader
+            tuningTestArgument[3] = currTestCase.testParamName; // Txt file that stores parameter
+
+            tuningCurrConfig = 0;
+            tuningEndConfig = tuningConfigNum;
+
+            if(tuningRandomSeed.length() == 0) {
+                tuningRandom = new Random();
+            }
+            else {
+                tuningRandom = new Random(tuningRandomSeed.hashCode());
+            }
+
+            pixelTuningTestLoop();
+        }
+    }
+
+    public void pixelTuningTestLoop() {
+        pixelTestViewObject.tuningCurrentConfigNumber.setText(tuningCurrConfig+1 + "/" + tuningEndConfig);
+
+        double generator = tuningRandom.nextDouble();
+
+        writeTuningParameters(currTestCase, true);
+
+        // Run test in different thread
+        testThread = new TestThread(MainActivity.this, tuningTestArgument, true, false);
+        testThread.start();
+    }
+
+    public void displayPixelTestResult(String testMode) {
+        TestResultDialogFragment dialog = new TestResultDialogFragment();
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(pixelTestResult.get(testMode));
+        dialog.setText(sb);
+        dialog.show(getSupportFragmentManager(), "TestResultDialog");
     }
 
     public void tuningTestLoop() {
@@ -1269,7 +1346,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 if(currTestType.equals("Explorer")) {
                     currTestViewObject.explorerCurrentIterationNumber.setText(iterationNum + "/" + currTestIterations);
                 }
-                else if (currTestType.equals("Tuning") || currTestType.equals("CoRR")) {
+                else if (currTestType.equals("Tuning")) {
                     currTestViewObject.tuningCurrentIterationNumber.setText(iterationNum + "/" + currTestIterations);
                 }
                 else if (currTestType.equals("MultiExplorer")) {
@@ -1281,8 +1358,11 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                 else if (currTestType.equals("ConformanceExplorer")){ // Conformance Explorer
                     conformanceTestViewObject.currentIterationNumber.setText(iterationNum + "/" + currTestIterations);
                 }
-                else { // Conformance Tuning
+                else if (currTestType.equals("ConformanceTuning")){ // Conformance Tuning
                     conformanceTestViewObject.currentIterationNumber.setText(iterationNum + "/" + currTestIterations);
+                }
+                else {
+                    pixelTestViewObject.currentIterationNumber.setText(iterationNum + "/" + currTestIterations);
                 }
             }
         });
@@ -1628,7 +1708,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
 
                     Toast.makeText(MainActivity.this, "Test " + currTestViewObject.testName + " finished!", Toast.LENGTH_LONG).show();
                 }
-                else if (currTestType.equals("Tuning") || currTestType.equals("CoRR")) {
+                else if (currTestType.equals("Tuning")) {
                     // Save param value
                     String currParamValue = convertFileToString(currTestCase.testParamName + ".txt");
 
@@ -2058,7 +2138,7 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                         conformanceExplorerTestLoop();
                     }
                 }
-                else { // Conformance Tuning
+                else if (currTestType.equals("ConformanceTuning")){ // Conformance Tuning
                     // Save param value
                     String currParamValue = convertFileToString(currTestCase.testParamName + ".txt");
 
@@ -2214,6 +2294,63 @@ public class MainActivity extends AppCompatActivity implements NavigationView.On
                     else {
                         conformanceCurrIteration++;
                         conformanceTuningTestLoop();
+                    }
+                }
+                else { // Pixel
+                    if(pixelTestViewObject.testMode.equals("ExplorerDefault") || pixelTestViewObject.testMode.equals("ExplorerStress")) {
+                        // Handle Buttons
+                        handleButtons(false, pixelTestViewObject.buttons, pixelTestViewObject.resultButtons);
+
+                        // Turn progress layout invisible
+                        pixelTestViewObject.progressLayout.setVisibility(View.GONE);
+
+                        // Store output
+                        String outputName = "litmustest_message_passing_output_explorer.txt";
+                        String outputString = convertFileToString(outputName);
+                        pixelTestResult.put(pixelTestViewObject.testMode, outputString);
+                    }
+                    else {
+                        // Save param value
+                        String currParamValue = convertFileToString(currTestCase.testParamName + ".txt");
+
+                        // Save result value
+                        String currResultValue = convertFileToString(currTestCase.outputNames[1] + ".txt");
+
+                        // Go through result and get number of sequential behaviors
+                        String startIndexIndicator = "seq: ";
+                        String endIndexIndicator = "\ninterleaved:";
+                        String numSeqBehaviors = currResultValue.substring(currResultValue.indexOf(startIndexIndicator) + startIndexIndicator.length(), currResultValue.indexOf(endIndexIndicator));
+
+                        // Go through result and get number of interleaved behaviors
+                        startIndexIndicator = "interleaved: ";
+                        endIndexIndicator = "\nweak:";
+                        String numInterleavedBehaviors = currResultValue.substring(currResultValue.indexOf(startIndexIndicator) + startIndexIndicator.length(), currResultValue.indexOf(endIndexIndicator));
+
+                        // Go through result and get number of weak behaviors
+                        startIndexIndicator = "weak: ";
+                        endIndexIndicator = "\nTotal elapsed time";
+                        String numWeakBehaviors = currResultValue.substring(currResultValue.indexOf(startIndexIndicator) + startIndexIndicator.length(), currResultValue.indexOf(endIndexIndicator));
+
+                        // Transfer over the tuning result case
+                        TuningResultCase currTuningResult = new TuningResultCase(currTestCase.testName, currParamValue, currResultValue,
+                                Integer.parseInt(numSeqBehaviors), Integer.parseInt(numInterleavedBehaviors), Integer.parseInt(numWeakBehaviors));
+
+                        currTuningResults.add(currTuningResult);
+
+                        if(tuningCurrConfig == tuningEndConfig - 1) {
+                            tuningResultCases.put(pixelTestViewObject.testName, currTuningResults);
+
+                            // Handle Buttons
+                            handleButtons(false, pixelTestViewObject.buttons, pixelTestViewObject.resultButtons);
+
+                            pixelTestViewObject.progressLayout.setVisibility(View.GONE);
+
+                            Toast.makeText(MainActivity.this, "Tuning Test " + pixelTestViewObject.testName + " finished!", Toast.LENGTH_LONG).show();
+                        }
+                        else {
+                            tuningCurrConfig++;
+                            pixelTuningTestLoop();
+                        }
                     }
                 }
             }

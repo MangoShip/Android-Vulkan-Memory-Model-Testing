@@ -19,7 +19,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
                 android:layout_marginTop="@dimen/_5sdp"
-                android:text="CoRR (Pixel)"
+                android:text="Message Passing (Pixel)"
                 android:textSize="@dimen/_20sdp"
                 android:textStyle="bold" />
 
@@ -30,10 +30,10 @@
                 android:layout_marginTop="@dimen/_5sdp"
                 android:textSize="@dimen/_17sdp"
                 android:textStyle="bold"
-                android:text="*Note: This CoRR test is only for testing with Pixel device. "/>
+                android:text="*Note: This Message Passing test is only for testing with Pixel device. "/>
 
             <TextView
-                android:id="@+id/corrPixel_description"
+                android:id="@+id/pixelTesting_description"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="@dimen/_10sdp"
@@ -41,127 +41,14 @@
                 android:textSize="@dimen/_15sdp"
                 android:hint="Description"/>
 
-            <LinearLayout
-                android:layout_width="match_parent"
+            <TextView
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="@dimen/_10sdp"
                 android:layout_marginTop="@dimen/_5sdp"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Initial State:  "
-                    android:textSize="@dimen/_15sdp"
-                    android:textStyle="bold"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@color/lightgray"
-                    android:padding="@dimen/_2sdp"
-                    android:text="*x = 0"
-                    android:textSize="@dimen/_12sdp"
-                    android:textColor="@color/red"/>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="@dimen/_10sdp"
-                android:layout_marginTop="@dimen/_5sdp"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Final State:  "
-                    android:textSize="@dimen/_15sdp"
-                    android:textStyle="bold"/>
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:background="@color/lightgray"
-                    android:padding="@dimen/_2sdp"
-                    android:text="r0 == 1 &amp;&amp; r1 == 0"
-                    android:textSize="@dimen/_12sdp"
-                    android:textColor="@color/red"/>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="@dimen/_10sdp"
-                android:layout_marginTop="@dimen/_5sdp"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Workgroup 0 Thread 0:"
-                    android:textSize="@dimen/_15sdp"
-                    android:textStyle="bold"/>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_margin="@dimen/_5sdp"
-                    android:padding="@dimen/_5sdp"
-                    android:background="@color/lightgray"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="0.1: atomic_store_explicit(x, 1, memory_order_relaxed)"
-                        android:textSize="@dimen/_11sdp"/>
-
-
-                </LinearLayout>
-
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="@dimen/_10sdp"
-                android:layout_marginTop="@dimen/_5sdp"
-                android:orientation="vertical">
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Workgroup 1 Thread 0:"
-                    android:textSize="@dimen/_15sdp"
-                    android:textStyle="bold"/>
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_margin="@dimen/_5sdp"
-                    android:padding="@dimen/_5sdp"
-                    android:background="@color/lightgray"
-                    android:orientation="vertical">
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="1.1: r0 = atomic_load_explicit(x, memory_order_relaxed)"
-                        android:textSize="@dimen/_11sdp"/>
-
-                    <TextView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="1.2: r1 = atomic_load_explicit(x, memory_order_relaxed)"
-                        android:textSize="@dimen/_11sdp"/>
-
-
-                </LinearLayout>
-
-            </LinearLayout>
+                android:textSize="@dimen/_17sdp"
+                android:textStyle="bold"
+                android:text="Explorer (Default)"/>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -171,7 +58,7 @@
                 android:orientation="horizontal">
 
                 <Button
-                    android:id="@+id/corrPixel_startButton"
+                    android:id="@+id/pixelTesting_explorerDefault_startButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
@@ -184,7 +71,95 @@
                     android:textColor="@color/white"/>
 
                 <Button
-                    android:id="@+id/corrPixel_resultButton"
+                    android:id="@+id/pixelTesting_explorerDefault_resultButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginHorizontal="@dimen/_20sdp"
+                    android:padding="@dimen/_15sdp"
+                    android:gravity="center"
+                    android:backgroundTint="@color/red"
+                    android:text="Result"
+                    android:textSize="@dimen/_13sdp"
+                    android:textColor="@color/white" />
+
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/_10sdp"
+                android:layout_marginTop="@dimen/_5sdp"
+                android:textSize="@dimen/_17sdp"
+                android:textStyle="bold"
+                android:text="Explorer (Stress)"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/_10sdp"
+                android:layout_marginTop="@dimen/_5sdp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/pixelTesting_explorerStress_startButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginHorizontal="@dimen/_20sdp"
+                    android:padding="@dimen/_15sdp"
+                    android:gravity="center"
+                    android:backgroundTint="@color/lightblue"
+                    android:text="Start"
+                    android:textSize="@dimen/_13sdp"
+                    android:textColor="@color/white"/>
+
+                <Button
+                    android:id="@+id/pixelTesting_explorerStress_resultButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginHorizontal="@dimen/_20sdp"
+                    android:padding="@dimen/_15sdp"
+                    android:gravity="center"
+                    android:backgroundTint="@color/red"
+                    android:text="Result"
+                    android:textSize="@dimen/_13sdp"
+                    android:textColor="@color/white" />
+
+            </LinearLayout>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/_10sdp"
+                android:layout_marginTop="@dimen/_5sdp"
+                android:textSize="@dimen/_17sdp"
+                android:textStyle="bold"
+                android:text="Tuning"/>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/_10sdp"
+                android:layout_marginTop="@dimen/_5sdp"
+                android:orientation="horizontal">
+
+                <Button
+                    android:id="@+id/pixelTesting_tuning_startButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginHorizontal="@dimen/_20sdp"
+                    android:padding="@dimen/_15sdp"
+                    android:gravity="center"
+                    android:backgroundTint="@color/lightblue"
+                    android:text="Start"
+                    android:textSize="@dimen/_13sdp"
+                    android:textColor="@color/white"/>
+
+                <Button
+                    android:id="@+id/pixelTesting_tuning_resultButton"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
@@ -199,7 +174,7 @@
             </LinearLayout>
 
             <LinearLayout
-                android:id="@+id/corrPixel_progressLayout"
+                android:id="@+id/pixelTesting_progressLayout"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="@dimen/_10sdp"
@@ -207,6 +182,7 @@
                 android:orientation="vertical">
 
                 <LinearLayout
+                    android:id="@+id/pixelTesting_configLayout"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal">
@@ -219,7 +195,7 @@
                         android:textStyle="bold" />
 
                     <TextView
-                        android:id="@+id/corrPixel_currentConfigNumber"
+                        android:id="@+id/pixelTesting_currentConfigNumber"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0/0"
@@ -240,7 +216,7 @@
                         android:textStyle="bold" />
 
                     <TextView
-                        android:id="@+id/corrPixel_currentIterationNumber"
+                        android:id="@+id/pixelTesting_currentIterationNumber"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="0/0"

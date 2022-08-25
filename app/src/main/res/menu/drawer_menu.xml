@@ -14,6 +14,9 @@
             <menu>
                 <group android:checkableBehavior="single">
                     <item
+                        android:id="@+id/nav_pixelTest"
+                        android:title="Message Passing (Pixel)" />
+                    <item
                         android:id="@+id/nav_message_passing"
                         android:title="Message Passing" />
                     <item
@@ -37,9 +40,6 @@
         <item android:title="Coherence Tests">
             <menu>
                 <group android:checkableBehavior="single">
-                    <item
-                        android:id="@+id/nav_corrPixel"
-                        android:title="CoRR (Pixel)" />
                     <item
                         android:id="@+id/nav_corr"
                         android:title="CoRR" />

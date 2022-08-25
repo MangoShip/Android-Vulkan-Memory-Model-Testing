@@ -17,6 +17,8 @@
     <string name="store_buffer_description">The store buffer litmus test checks to see if stores can be buffered and re-ordered on different threads.</string>
     <string name="write_22_description">The 2+2 write litmus test checks to see if two stores in two threads can both be re-ordered.</string>
 
+    <string name="pixel_testing_description">The message passing litmus test checks to see if two stores in one thread can be re-ordered according to loads on a second thread. In this test, all writes and reads are to one memory location. </string>
+
     <string name="corr_description">The CoRR litmus test checks SC-per-location by ensuring subsequent reads of the same value cannot be re-ordered.</string>
     <string name="coww_description">The CoWW litmus test checks SC-per-location by ensuring two writes to the same address on the same thread cannot be re-ordered.</string>
     <string name="cowr_description">The CoWR litmus test checks SC-per-location by ensuring that if a read observes a write from another thread, any prior writes to the same address are not re-ordered beyond the read.</string>

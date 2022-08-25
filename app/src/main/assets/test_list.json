@@ -25,7 +25,8 @@
       "parameter_presets": [
         "parameters_basic",
         "parameters_stress",
-        "parameters_basic_coherence"
+        "parameters_basic_coherence",
+        "parameters_stress_coherence"
       ]
     },
     {
