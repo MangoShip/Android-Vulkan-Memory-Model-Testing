@@ -19,15 +19,6 @@ __kernel void litmus_test (
   uint total_ids = get_local_size(0) * stress_params[9];
   uint y_0 = (permute_id(id_0, stress_params[8], total_ids)) * stress_params[10] * 2 + stress_params[11];
   uint mem_y_0 = atomic_load(&test_locations[y_0]);
-  /*if ((r0 == 0 && r1 == 0)) {
-    atomic_fetch_add(&test_results[0], 1);
-  } else if ((r0 == 2 && r1 == 1)) {
-    atomic_fetch_add(&test_results[1], 1);
-  } else if ((r0 == 0 && r1 == 1)) {
-    atomic_fetch_add(&test_results[2], 1);
-  } else if ((r0 == 2 && r1 == 0)) {
-    atomic_fetch_add(&test_results[3], 1);
-  }*/
   if ((r0 == 0 && r1 == 0)) {
     atomic_fetch_add(&test_results[0], 1);
   } else if ((r0 == 2 && r1 == 2)) {
@@ -40,6 +31,8 @@ __kernel void litmus_test (
     atomic_fetch_add(&test_results[2], 1);
   } else if ((r0 == 1 && r1 == 2)) {
     atomic_fetch_add(&test_results[2], 1);
+  } else if ((r0 == 1 && r1 == 0)) {
+    atomic_fetch_add(&test_results[3], 1);
   } else if ((r0 == 2 && r1 == 0)) {
     atomic_fetch_add(&test_results[3], 1);
   } else if ((r0 == 2 && r1 == 1)) {
